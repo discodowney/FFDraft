@@ -10,12 +10,21 @@ import (
 	"go-app/models"
 )
 
+// APIFootballClientInterface defines the interface for API-Football client operations
+type APIFootballClientInterface interface {
+	FetchTeams() ([]*models.Team, error)
+	FetchTeamByExternalID(externalID int) (*models.Team, error)
+}
+
 // APIFootballClient handles communication with the API-Football service
 type APIFootballClient struct {
 	BaseURL    string
 	APIKey     string
 	HTTPClient *http.Client
 }
+
+// Ensure APIFootballClient implements APIFootballClientInterface
+var _ APIFootballClientInterface = (*APIFootballClient)(nil)
 
 // NewAPIFootballClient creates a new APIFootballClient instance
 func NewAPIFootballClient(apiKey string) *APIFootballClient {

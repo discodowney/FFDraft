@@ -1,21 +1,24 @@
-package services
+package team_sync
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"go-app/external"
 	"go-app/models"
+	"go-app/services/team"
 )
 
 // TeamSyncService handles synchronizing teams from external sources
 type TeamSyncService struct {
-	teamService       *TeamService
-	apiFootballClient *external.APIFootballClient
+	teamService       team.TeamService
+	apiFootballClient external.APIFootballClientInterface
 }
 
 // NewTeamSyncService creates a new TeamSyncService instance
-func NewTeamSyncService(teamService *TeamService, apiFootballClient *external.APIFootballClient) *TeamSyncService {
+func NewTeamSyncService(teamService team.TeamService, apiFootballClient external.APIFootballClientInterface) *TeamSyncService {
 	return &TeamSyncService{
 		teamService:       teamService,
 		apiFootballClient: apiFootballClient,
@@ -37,7 +40,7 @@ func (s *TeamSyncService) SyncTeamsFromExternalAPI() error {
 	// Process each team
 	for _, team := range teams {
 		// Check if team already exists
-		existingTeam, err := s.teamService.GetTeamByExternalID(team.ExternalId)
+		existingTeam, err := s.teamService.GetTeamByExternalID(int64(team.ExternalId))
 		if err != nil {
 			log.Printf("Error checking for existing team %d: %v", team.ExternalId, err)
 			continue
@@ -46,7 +49,8 @@ func (s *TeamSyncService) SyncTeamsFromExternalAPI() error {
 		if existingTeam != nil {
 			// Update existing team
 			existingTeam.Name = team.Name
-			if err := s.teamService.UpdateTeam(existingTeam); err != nil {
+			_, err := s.teamService.UpdateTeam(existingTeam)
+			if err != nil {
 				log.Printf("Error updating team %d: %v", team.ExternalId, err)
 				continue
 			}
@@ -57,7 +61,8 @@ func (s *TeamSyncService) SyncTeamsFromExternalAPI() error {
 				Name:       team.Name,
 				ExternalId: team.ExternalId,
 			}
-			if err := s.teamService.CreateTeam(newTeam); err != nil {
+			_, err := s.teamService.CreateTeam(newTeam)
+			if err != nil {
 				log.Printf("Error creating team %d: %v", team.ExternalId, err)
 				continue
 			}
@@ -80,7 +85,7 @@ func (s *TeamSyncService) SyncTeamByExternalID(externalID int) error {
 	}
 
 	// Check if team already exists
-	existingTeam, err := s.teamService.GetTeamByExternalID(team.ExternalId)
+	existingTeam, err := s.teamService.GetTeamByExternalID(int64(team.ExternalId))
 	if err != nil {
 		return fmt.Errorf("error checking for existing team: %w", err)
 	}
@@ -88,7 +93,8 @@ func (s *TeamSyncService) SyncTeamByExternalID(externalID int) error {
 	if existingTeam != nil {
 		// Update existing team
 		existingTeam.Name = team.Name
-		if err := s.teamService.UpdateTeam(existingTeam); err != nil {
+		_, err := s.teamService.UpdateTeam(existingTeam)
+		if err != nil {
 			return fmt.Errorf("error updating team: %w", err)
 		}
 		log.Printf("Updated team: %s (ID: %d)", team.Name, team.ExternalId)
@@ -98,12 +104,58 @@ func (s *TeamSyncService) SyncTeamByExternalID(externalID int) error {
 			Name:       team.Name,
 			ExternalId: team.ExternalId,
 		}
-		if err := s.teamService.CreateTeam(newTeam); err != nil {
+		_, err := s.teamService.CreateTeam(newTeam)
+		if err != nil {
 			return fmt.Errorf("error creating team: %w", err)
 		}
 		log.Printf("Created team: %s (ID: %d)", team.Name, team.ExternalId)
 	}
 
 	log.Printf("Team sync completed successfully for external ID: %d", externalID)
+	return nil
+}
+
+// SyncTeams synchronizes teams from the external API
+func (s *TeamSyncService) SyncTeams() error {
+	teams, err := s.apiFootballClient.FetchTeams()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+
+	for _, team := range teams {
+		// Check if team already exists
+		existingTeam, err := s.teamService.GetTeamByExternalID(int64(team.ExternalId))
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+
+		if existingTeam != nil {
+			// Update existing team
+			existingTeam.Name = team.Name
+			_, err := s.teamService.UpdateTeam(existingTeam)
+			if err != nil {
+				log.Printf("Error updating team %d: %v", team.ExternalId, err)
+				continue
+			}
+			log.Printf("Updated team: %s (ID: %d)", team.Name, team.ExternalId)
+		} else {
+			// Create new team
+			newTeam := &models.Team{
+				Name:       team.Name,
+				ExternalId: team.ExternalId,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			}
+			_, err := s.teamService.CreateTeam(newTeam)
+			if err != nil {
+				log.Printf("Error creating team %d: %v", team.ExternalId, err)
+				continue
+			}
+			log.Printf("Created team: %s (ID: %d)", team.Name, team.ExternalId)
+		}
+	}
+
 	return nil
 }

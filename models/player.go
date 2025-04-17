@@ -14,7 +14,8 @@ const (
 
 type Player struct {
 	ID        int       `db:"id" json:"id"`
-	Name      string    `db:"name" json:"name"`
+	FirstName string    `db:"first_name" json:"first_name"`
+	LastName  string    `db:"last_name" json:"last_name"`
 	Position  Position  `db:"position" json:"position"`
 	TeamID    int       `db:"team_id" json:"team_id"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`

@@ -1,23 +1,26 @@
-package apis
+package team
 
 import (
 	"net/http"
 	"strconv"
 
-	"go-app/services"
+	"go-app/services/player"
+	"go-app/services/team"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 )
 
 type TeamHandler struct {
-	teamService *services.TeamService
+	teamService   team.TeamService
+	playerService player.PlayerService
 }
 
 // NewTeamHandler creates a new TeamHandler instance
 func NewTeamHandler(db *sqlx.DB) *TeamHandler {
 	return &TeamHandler{
-		teamService: services.NewTeamService(db),
+		teamService:   team.NewTeamService(db),
+		playerService: player.NewPlayerService(db),
 	}
 }
 
@@ -32,7 +35,7 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 		return
 	}
 
-	team, err := h.teamService.GetTeam(id)
+	team, err := h.teamService.GetTeam(int64(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve team",
@@ -48,15 +51,20 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 	// Get query parameters
 	query := c.Request.URL.Query()
 
-	// Build filter map
-	filters := make(map[string]interface{})
+	// Initialize filter
+	filter := &team.TeamFilter{}
 
 	// Name filter (partial match)
 	if name := query.Get("name"); name != "" {
-		filters["name"] = name
+		filter.Name = name
 	}
 
-	teams, err := h.teamService.ListTeams(filters)
+	// External ID filter
+	if externalID := query.Get("external_id"); externalID != "" {
+		filter.ExternalID = externalID
+	}
+
+	teams, err := h.teamService.ListTeams()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve teams",
@@ -67,24 +75,24 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 	c.JSON(http.StatusOK, teams)
 }
 
-// GetTeamsByLeague handles GET /api/leagues/:leagueId/teams
-func (h *TeamHandler) GetTeamsByLeague(c *gin.Context) {
-	leagueIDStr := c.Param("leagueId")
-	leagueID, err := strconv.Atoi(leagueIDStr)
+// GetTeamPlayers handles GET /api/teams/:id/players
+func (h *TeamHandler) GetTeamPlayers(c *gin.Context) {
+	teamIDStr := c.Param("id")
+	teamID, err := strconv.Atoi(teamIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid league ID",
+			"error": "Invalid team ID",
 		})
 		return
 	}
 
-	teams, err := h.teamService.GetTeamsByLeague(leagueID)
+	players, err := h.playerService.GetPlayersByTeam(teamID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve league teams",
+			"error": "Failed to retrieve team players",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, teams)
+	c.JSON(http.StatusOK, players)
 }

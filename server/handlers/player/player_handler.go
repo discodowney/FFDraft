@@ -1,23 +1,24 @@
-package apis
+package player
 
 import (
 	"net/http"
 	"strconv"
 
 	"go-app/models"
-	"go-app/services"
+	"go-app/services/player"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 )
 
 type PlayerHandler struct {
-	playerService *services.PlayerService
+	playerService player.PlayerService
 }
 
 // NewPlayerHandler creates a new PlayerHandler instance
-func NewPlayerHandler() *PlayerHandler {
+func NewPlayerHandler(db *sqlx.DB) *PlayerHandler {
 	return &PlayerHandler{
-		playerService: services.NewPlayerService(),
+		playerService: player.NewPlayerService(db),
 	}
 }
 
@@ -48,25 +49,26 @@ func (h *PlayerHandler) ListPlayers(c *gin.Context) {
 	// Get query parameters
 	query := c.Request.URL.Query()
 
-	// Build filter map
-	filters := make(map[string]interface{})
+	// Initialize filter
+	filter := &player.PlayerFilter{}
 
 	// Position filter
 	if position := query.Get("position"); position != "" {
 		// Validate position
-		if err := h.playerService.ValidatePosition(models.Position(position)); err != nil {
+		pos := models.Position(position)
+		if err := h.playerService.ValidatePosition(pos); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid position. Must be one of: GK, DEF, MID, FWD",
 			})
 			return
 		}
-		filters["position"] = position
+		filter.Position = pos
 	}
 
 	// Team filter
 	if teamID := query.Get("team_id"); teamID != "" {
 		if id, err := strconv.Atoi(teamID); err == nil {
-			filters["team_id"] = id
+			filter.TeamID = id
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid team_id",
@@ -75,12 +77,17 @@ func (h *PlayerHandler) ListPlayers(c *gin.Context) {
 		}
 	}
 
-	// Name filter (partial match)
-	if name := query.Get("name"); name != "" {
-		filters["name"] = name
+	// First name filter (partial match)
+	if firstName := query.Get("first_name"); firstName != "" {
+		filter.FirstName = firstName
 	}
 
-	players, err := h.playerService.ListPlayers(filters)
+	// Last name filter (partial match)
+	if lastName := query.Get("last_name"); lastName != "" {
+		filter.LastName = lastName
+	}
+
+	players, err := h.playerService.ListPlayers(filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve players",

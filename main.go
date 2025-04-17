@@ -1,18 +1,26 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"go-app/config"
 	"go-app/database"
-	"go-app/server"
+	v1 "go-app/server/v1"
 )
 
 func main() {
+	// Parse command line flags
+	env := flag.String("env", "development", "Environment (development/production)")
+	flag.Parse()
+
+	// Load environment variables based on the environment
+	if err := loadEnv(*env); err != nil {
+		log.Fatalf("Error loading environment: %v", err)
+	}
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -24,30 +32,25 @@ func main() {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
 
-	// Initialize database
+	// Initialize database connection
 	db, err := database.InitDB(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Error initializing database: %v", err)
 	}
 	defer db.Close()
 
-	// Setup router
-	router := server.SetupRouter(db)
+	// Start the server using v1 handler
+	v1.StartServer(db)
+}
 
-	// Start server
-	port := cfg.ServerPort
-	go func() {
-		if err := router.Run(fmt.Sprintf(":%s", port)); err != nil {
-			log.Fatalf("Failed to start server: %v", err)
-		}
-	}()
+func loadEnv(env string) error {
+	envFile := fmt.Sprintf(".env.%s", env)
+	if _, err := os.Stat(envFile); os.IsNotExist(err) {
+		return fmt.Errorf("environment file %s not found", envFile)
+	}
 
-	log.Printf("Server started on port %s", port)
-
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down server...")
+	// In a real application, you would load the environment variables here
+	// For this example, we'll just print the environment
+	fmt.Printf("Loading environment: %s\n", env)
+	return nil
 }

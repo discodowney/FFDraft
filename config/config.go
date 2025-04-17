@@ -34,7 +34,7 @@ func Load() (*Config, error) {
 		APIFootballAPIKey: getEnvOrDefault("API_FOOTBALL_API_KEY", ""),
 
 		// Database
-		DatabaseURL: getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/football_fantasy?sslmode=disable"),
+		DatabaseURL: getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/go_app_db?sslmode=disable"),
 
 		// Server
 		ServerPort: getEnvOrDefault("SERVER_PORT", "8080"),

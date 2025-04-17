@@ -8,7 +8,8 @@ import (
 	"go-app/config"
 	"go-app/database"
 	"go-app/external"
-	"go-app/services"
+	"go-app/services/team"
+	"go-app/services/team_sync"
 )
 
 func main() {
@@ -36,8 +37,8 @@ func main() {
 	apiFootballClient := external.NewAPIFootballClient(cfg.APIFootballAPIKey)
 
 	// Create services
-	teamService := services.NewTeamService(db)
-	teamSyncService := services.NewTeamSyncService(teamService, apiFootballClient)
+	teamService := team.NewTeamService(db)
+	teamSyncService := team_sync.NewTeamSyncService(teamService, apiFootballClient)
 
 	// Sync teams
 

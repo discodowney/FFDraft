@@ -23,7 +23,7 @@ func InitDB(dbURL string) (*sqlx.DB, error) {
 	return db, nil
 }
 
-// GetDB returns the database connection
+// GetDB returns the database connectiona
 func GetDB() *sqlx.DB {
 	return db
 }
