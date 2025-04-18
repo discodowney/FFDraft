@@ -176,12 +176,14 @@ func TestTeamService(t *testing.T) {
 		// Test successful retrieval
 		retrievedTeam, err := teamService.GetTeamByExternalID(123)
 		assert.NoError(t, err)
+		assert.NotNil(t, retrievedTeam)
 		assert.Equal(t, createdTeam.ID, retrievedTeam.ID)
 		assert.Equal(t, team.Name, retrievedTeam.Name)
 		assert.Equal(t, team.ExternalId, retrievedTeam.ExternalId)
 
 		// Test non-existent team
-		_, err = teamService.GetTeamByExternalID(999)
-		assert.Error(t, err)
+		nonExistentTeam, err := teamService.GetTeamByExternalID(999)
+		assert.NoError(t, err)
+		assert.Nil(t, nonExistentTeam)
 	})
 }

@@ -9,7 +9,10 @@ import (
 // Config holds all configuration for the application
 type Config struct {
 	// API Keys
-	APIFootballAPIKey string
+	APIFootballBaseURL  string
+	APIFootballAPIKey   string
+	APIFootballLeagueID string
+	APIFootballSeason   string
 
 	// Database
 	DatabaseURL string
@@ -30,8 +33,11 @@ func Load() (*Config, error) {
 
 	// Create config with default values
 	config := &Config{
-		// API URLs - with defaults
-		APIFootballAPIKey: getEnvOrDefault("API_FOOTBALL_API_KEY", ""),
+		// API Keys
+		APIFootballBaseURL:  getEnvOrDefault("API_FOOTBALL_BASE_URL", "https://v3.football.api-sports.io"),
+		APIFootballAPIKey:   getEnvOrDefault("API_FOOTBALL_API_KEY", ""),
+		APIFootballLeagueID: getEnvOrDefault("API_FOOTBALL_LEAGUE_ID", "39"), // Default to Premier League
+		APIFootballSeason:   getEnvOrDefault("API_FOOTBALL_SEASON", "2023"),  // Default to current season
 
 		// Database
 		DatabaseURL: getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/go_app_db?sslmode=disable"),

@@ -20,6 +20,8 @@ type APIFootballClientInterface interface {
 type APIFootballClient struct {
 	BaseURL    string
 	APIKey     string
+	LeagueID   string
+	Season     string
 	HTTPClient *http.Client
 }
 
@@ -27,10 +29,12 @@ type APIFootballClient struct {
 var _ APIFootballClientInterface = (*APIFootballClient)(nil)
 
 // NewAPIFootballClient creates a new APIFootballClient instance
-func NewAPIFootballClient(apiKey string) *APIFootballClient {
+func NewAPIFootballClient(baseURL, apiKey, leagueID, season string) *APIFootballClient {
 	return &APIFootballClient{
-		BaseURL: "https://api-football-v1.p.rapidapi.com/v3",
-		APIKey:  apiKey,
+		BaseURL:  baseURL,
+		APIKey:   apiKey,
+		LeagueID: leagueID,
+		Season:   season,
 		HTTPClient: &http.Client{
 			Timeout: time.Second * 10,
 		},
@@ -39,8 +43,7 @@ func NewAPIFootballClient(apiKey string) *APIFootballClient {
 
 // FetchTeams retrieves teams from the API-Football service
 func (c *APIFootballClient) FetchTeams() ([]*models.Team, error) {
-	// Construct the API URL
-	url := fmt.Sprintf("%s/teams", c.BaseURL)
+	url := fmt.Sprintf("%s/teams?league=%s&season=%s", c.BaseURL, c.LeagueID, c.Season)
 
 	// Create a new request
 	req, err := http.NewRequest("GET", url, nil)
