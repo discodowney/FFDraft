@@ -39,18 +39,28 @@ func main() {
 	}
 	defer db.Close()
 
+	// Run database migrations
+	if err := database.RunMigrations(db); err != nil {
+		log.Fatalf("Error running migrations: %v", err)
+	}
+
 	// Start the server using v1 handler
 	v1.StartServer(db)
 }
 
 func loadEnv(env string) error {
-	envFile := fmt.Sprintf(".env.%s", env)
-	if _, err := os.Stat(envFile); os.IsNotExist(err) {
-		return fmt.Errorf("environment file %s not found", envFile)
+	// Try to load .env first
+	if _, err := os.Stat(".env"); err == nil {
+		fmt.Printf("Loading environment from .env\n")
+		return nil
 	}
 
-	// In a real application, you would load the environment variables here
-	// For this example, we'll just print the environment
-	fmt.Printf("Loading environment: %s\n", env)
+	// If .env doesn't exist, try environment-specific file
+	envFile := fmt.Sprintf(".env.%s", env)
+	if _, err := os.Stat(envFile); os.IsNotExist(err) {
+		return fmt.Errorf("neither .env nor %s found", envFile)
+	}
+
+	fmt.Printf("Loading environment from %s\n", envFile)
 	return nil
 }

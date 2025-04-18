@@ -1,6 +1,7 @@
 package team
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -53,7 +54,7 @@ func (s *teamServiceImpl) CreateTeam(team *models.Team) (*models.Team, error) {
 		RETURNING id
 	`, team.Name, team.ExternalId, team.CreatedAt, team.UpdatedAt).Scan(&id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating team: %w", err)
 	}
 
 	team.ID = id
@@ -145,6 +146,9 @@ func (s *teamServiceImpl) GetTeamByExternalID(externalID int64) (*models.Team, e
 	team := &models.Team{}
 	err := s.db.Get(team, "SELECT * FROM teams WHERE external_id = $1", externalID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return team, nil
