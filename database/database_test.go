@@ -80,10 +80,10 @@ func TestDatabaseOperations(t *testing.T) {
 		// Create a team
 		var teamID int
 		err := db.QueryRow(`
-			INSERT INTO teams (name, created_at, updated_at)
-			VALUES ($1, $2, $3)
+			INSERT INTO teams (name, external_id, created_at, updated_at)
+			VALUES ($1, $2, $3, $4)
 			RETURNING id
-		`, "Test Team", time.Now(), time.Now()).Scan(&teamID)
+		`, "Test Team", 12345, time.Now(), time.Now()).Scan(&teamID)
 		assert.NoError(t, err)
 		assert.NotZero(t, teamID)
 
@@ -106,10 +106,10 @@ func TestDatabaseOperations(t *testing.T) {
 		// First create a team
 		var teamID int
 		err := db.QueryRow(`
-			INSERT INTO teams (name, country, created_at, updated_at)
+			INSERT INTO teams (name, external_id, created_at, updated_at)
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
-		`, "Player Team", "Player Country", time.Now(), time.Now()).Scan(&teamID)
+		`, "Player Team", 12345, time.Now(), time.Now()).Scan(&teamID)
 		assert.NoError(t, err)
 
 		// Create a player
@@ -133,5 +133,44 @@ func TestDatabaseOperations(t *testing.T) {
 		assert.Equal(t, "Test", firstName)
 		assert.Equal(t, "Player", lastName)
 		assert.Equal(t, "Forward", position)
+	})
+
+	// Test league operations
+	t.Run("League Operations", func(t *testing.T) {
+		// Clear the database at the end of the test, even if it fails
+		defer testDB.Clear()
+
+		// Create a league
+		code := "TEST123"
+		name := "Test League"
+		var leagueID int
+		err := db.QueryRow(`
+			INSERT INTO leagues (code, name, created_at, updated_at)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, code, name, time.Now(), time.Now()).Scan(&leagueID)
+		assert.NoError(t, err)
+		assert.NotZero(t, leagueID)
+
+		// Get the league
+		var retrievedCode, retrievedName string
+		err = db.QueryRow(`
+			SELECT code, name
+			FROM leagues
+			WHERE id = $1
+		`, leagueID).Scan(&retrievedCode, &retrievedName)
+		assert.NoError(t, err)
+		assert.Equal(t, code, retrievedCode)
+		assert.Equal(t, name, retrievedName)
+
+		// Test duplicate code
+		duplicateName := "Duplicate League"
+		err = db.QueryRow(`
+			INSERT INTO leagues (code, name, created_at, updated_at)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, code, duplicateName, time.Now(), time.Now()).Scan(&leagueID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate key value violates unique constraint")
 	})
 }
