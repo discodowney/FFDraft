@@ -78,8 +78,22 @@ func (t *TestDB) Close() error {
 
 // createTestTables creates all necessary tables for testing
 func createTestTables(db *sqlx.DB) error {
-	// Create users table
+	// Create leagues table
 	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS leagues (
+			id SERIAL PRIMARY KEY,
+			code VARCHAR(255) NOT NULL UNIQUE,
+			name VARCHAR(255) NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to create leagues table: %v", err)
+	}
+
+	// Create users table
+	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
 			first_name VARCHAR(255) NOT NULL,
@@ -219,6 +233,7 @@ func dropTestTables(db *sqlx.DB) error {
 		"players",
 		"teams",
 		"users",
+		"leagues",
 	}
 
 	for _, table := range tables {
@@ -242,6 +257,7 @@ func (t *TestDB) Clear() error {
 		"players",
 		"teams",
 		"users",
+		"leagues",
 	}
 
 	for _, table := range tables {
